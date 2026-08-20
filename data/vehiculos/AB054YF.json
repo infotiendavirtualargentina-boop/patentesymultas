@@ -1,0 +1,35 @@
+{
+  "dominio": "AB054YF",
+  "anio": "2017",
+  "marca": "VW",
+  "modelo": "HIGH UP! 1.0 MPI",
+  "registro": "SANTA FE N° 3 (21035)",
+  "tipo": "Nuestro",
+  "jurisdicciones": {
+    "sf_ciudad": {
+      "montoPatente": "35865.62",
+      "montoMultasPagina": "",
+      "montoMultasSuat": "0"
+    },
+    "sf_provincia": {
+      "montoMultasSuat": "0"
+    },
+    "caba": {
+      "montoMultasSuat": "0"
+    },
+    "ba_provincia": {
+      "montoMultasSuat": "0"
+    },
+    "entre_rios": {
+      "montoMultasSuat": "0"
+    },
+    "cordoba": {
+      "montoMultasSuat": "0"
+    },
+    "misiones": {
+      "montoMultasSuat": "0"
+    }
+  },
+  "observaciones": "",
+  "actualizado": "2026-08-20T18:25:17.306Z"
+}
