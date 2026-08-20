@@ -14,11 +14,26 @@
       "montoPatente": "311630",
       "montoMultas": "340350",
       "fechaConsulta": "2026-08-20"
+    },
+    "caba": {
+      "montoMultas": "0"
+    },
+    "ba_provincia": {
+      "montoMultas": "0"
+    },
+    "misiones": {
+      "montoMultas": "0"
+    },
+    "cordoba": {
+      "montoMultas": "0"
+    },
+    "entre_rios": {
+      "montoMultas": "0"
     }
   },
   "quienPaga": "Cliente",
   "fechaPago": "",
   "documento": null,
   "observaciones": "",
-  "actualizado": "2026-08-20T17:29:21.474Z"
+  "actualizado": "2026-08-20T17:34:09.843Z"
 }
