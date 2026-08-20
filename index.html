@@ -344,7 +344,7 @@
         <div class="value" id="statTotal">0</div>
       </div>
       <div class="stat warn">
-        <div class="label">Deuda total</div>
+        <div class="label">Saldo pendiente</div>
         <div class="value" id="statDeuda">$0</div>
       </div>
       <div class="stat">
@@ -729,7 +729,9 @@ async function loadAllFromGithub(){
 function vehiculoTotalDeuda(rec){
   let total = 0;
   for(const j of Object.values(rec.jurisdicciones || {})){
-    total += (parseFloat(j.montoPatente) || 0) + (parseFloat(j.montoMultasPagina) || 0) + (parseFloat(j.montoMultasSuat) || 0);
+    const debe = (parseFloat(j.montoPatente) || 0) + (parseFloat(j.montoMultasPagina) || 0) + (parseFloat(j.montoMultasSuat) || 0);
+    const pagado = parseFloat(j.montoPagado) || 0;
+    total += Math.max(0, debe - pagado);
   }
   return total;
 }
@@ -839,7 +841,7 @@ function vehiculoCard(v){
     ${v.registro ? `<div class="vinfo">📍 ${escapeHtml(v.registro)}</div>` : ''}
     <div class="pills">${estadoPill} ${docPill}</div>
     <div class="vcard-debt">
-      <div><div class="lbl">Deuda total (patentes+multas)</div><div class="amount ${deuda>0?'pos':'zero'}">${fmtMoney(deuda)}</div></div>
+      <div><div class="lbl">Saldo pendiente (deuda - pagado)</div><div class="amount ${deuda>0?'pos':'zero'}">${fmtMoney(deuda)}</div></div>
     </div>
     <div class="vcard-actions">
       <button class="btn btn-outline btn-sm btn-edit">Editar</button>
