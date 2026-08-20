@@ -263,6 +263,11 @@
   .juris-fields label{font-size:10.5px; color:var(--text-mut); font-weight:600; display:block; margin-bottom:3px;}
   .juris-fields input{width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit;}
   .juris-fields .juris-link{display:block; margin-top:5px; font-size:11px;}
+  .juris-fields-3{grid-template-columns:1fr 1fr 1fr;}
+  .juris-fields-2{grid-template-columns:1fr 1fr;}
+  .juris-filebox{min-height:34px; display:flex; align-items:center;}
+  .juris-filebox img.jf-thumb{height:30px; border-radius:4px; border:1px solid var(--line);}
+  .juris-filebox .jf-name{font-size:11px; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
   .dnrpa-tip{
     background:var(--steel-light); border-radius:8px; padding:10px 12px; font-size:12.5px;
@@ -361,8 +366,8 @@
       </select>
       <select class="filter" id="filterPago">
         <option value="">Todos los pagos</option>
-        <option value="Pagado - Cliente">Pagado - Cliente</option>
-        <option value="Pagado - Nosotros">Pagado - Nosotros</option>
+        <option value="Sin deuda">Sin deuda</option>
+        <option value="Pagado">Pagado</option>
         <option value="Pendiente">Pendiente</option>
       </select>
     </div>
@@ -424,24 +429,6 @@
       <div class="section-title">Deudas por jurisdicción <div class="line"></div></div>
       <div id="jurisContainer"></div>
       <button class="btn btn-outline btn-sm" id="btnAddCustomJuris" type="button">+ Agregar otra jurisdicción</button>
-
-      <div class="section-title">Pago <div class="line"></div></div>
-      <div class="radio-group" id="pagoGroup">
-        <div class="radio-opt" data-val="Cliente">Paga el cliente</div>
-        <div class="radio-opt" data-val="Nosotros">Pagamos nosotros</div>
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label>Fecha de pago</label>
-        <input type="date" id="fFechaPago">
-      </div>
-
-      <div class="section-title">Comprobante de pago <div class="line"></div></div>
-      <div class="filebox" id="fileBox">
-        <input type="file" id="fFile" accept="image/*,application/pdf">
-        <div id="fileBoxContent">
-          <label class="fb-label" for="fFile">📎 Tocá para adjuntar una foto o PDF del comprobante</label>
-        </div>
-      </div>
 
       <div class="section-title">Observaciones <div class="line"></div></div>
       <div class="field">
@@ -533,9 +520,7 @@ const DEFAULT_JURIS = [
 let jurisConfig = [];   // [{key,name,urlPatente,urlMultas}]
 let vehiculos = [];     // full records
 let editingDominio = null;
-let currentFile = null; // {name, type, dataUrl}
 let tipoSel = "Nuestro";
-let pagoSel = "Cliente";
 let gh = { owner:'', repo:'', branch:'main', token:'' };
 
 /* ===================== CONEXIÓN CON GITHUB ===================== */
@@ -732,12 +717,42 @@ async function loadAllFromGithub(){
 function vehiculoTotalDeuda(rec){
   let total = 0;
   for(const j of Object.values(rec.jurisdicciones || {})){
-    total += (parseFloat(j.montoPatente) || 0) + (parseFloat(j.montoMultas) || 0);
+    total += (parseFloat(j.montoPatente) || 0) + (parseFloat(j.montoMultasPagina) || 0) + (parseFloat(j.montoMultasSuat) || 0);
+  }
+  return total;
+}
+function vehiculoTotalCobrado(rec){
+  let total = 0;
+  for(const j of Object.values(rec.jurisdicciones || {})){
+    total += (parseFloat(j.montoCobrado) || 0);
+  }
+  return total;
+}
+function vehiculoTotalPagado(rec){
+  let total = 0;
+  for(const j of Object.values(rec.jurisdicciones || {})){
+    total += (parseFloat(j.montoPagado) || 0);
   }
   return total;
 }
 function fmtMoney(n){
-  return '$' + (n || 0).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+  return '$ ' + (n || 0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+/* Convierte lo que tipeó el usuario ("311.630,50", "$311630", "311630") a número plano */
+function parseMoneyInput(str){
+  if(str === null || str === undefined) return '';
+  let s = String(str).replace(/[^\d,.\-]/g, '');
+  if(s.includes(',')){
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  return s;
+}
+/* Formatea un número (o string numérica) como pesos argentinos para mostrar */
+function formatMoneyDisplay(val){
+  if(val === '' || val === null || val === undefined) return '';
+  const n = parseFloat(val);
+  if(isNaN(n)) return '';
+  return '$ ' + n.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
 /* ===================== RENDER GRID ===================== */
@@ -775,10 +790,13 @@ function renderGrid(){
 }
 
 function estadoPago(v){
-  if(v.fechaPago && v.quienPaga){
-    return 'Pagado - ' + v.quienPaga;
-  }
-  return 'Pendiente';
+  const jurisdicciones = Object.values(v.jurisdicciones || {});
+  const conDeuda = jurisdicciones.filter(j =>
+    ((parseFloat(j.montoPatente)||0) + (parseFloat(j.montoMultasPagina)||0) + (parseFloat(j.montoMultasSuat)||0)) > 0
+  );
+  if(conDeuda.length === 0) return 'Sin deuda';
+  const pendientes = conDeuda.filter(j => !j.fechaPago);
+  return pendientes.length > 0 ? 'Pendiente' : 'Pagado';
 }
 
 function vehiculoCard(v){
@@ -794,7 +812,8 @@ function vehiculoCard(v){
     ? '<span class="pill pill-purple">Consignación</span>'
     : '<span class="pill pill-blue">Nuestro</span>';
 
-  const docPill = v.documento ? '<span class="pill pill-gray">📎 Comprobante</span>' : '';
+  const docCount = Object.values(v.jurisdicciones || {}).filter(j => j.comprobante).length;
+  const docPill = docCount > 0 ? `<span class="pill pill-gray">📎 ${docCount} comprobante${docCount>1?'s':''}</span>` : '';
 
   div.innerHTML = `
     <div class="vcard-top">
@@ -825,13 +844,32 @@ function escapeHtml(s){
 }
 
 /* ===================== JURISDICCIONES EN FORM ===================== */
-let formJuris = {}; // key -> {montoPatente, montoMultas, fechaConsulta}
+const SUAT_URL = 'https://suats.com.ar/';
+let formJuris = {}; // key -> {montoPatente, montoMultasPagina, montoMultasSuat, montoCobrado, montoPagado, fechaConsulta, fechaPago, comprobante}
+
+function jfInputId(key){ return 'jfile-' + key; }
+
+function renderJurisFileBoxInner(key, file){
+  if(!file){
+    return `<input type="file" id="${jfInputId(key)}" class="juris-file-input" data-key="${key}" accept="image/*,application/pdf" style="display:none;">
+      <label class="btn btn-outline btn-sm" for="${jfInputId(key)}" style="cursor:pointer; white-space:nowrap;">📎 Adjuntar</label>`;
+  }
+  const preview = file.type && file.type.startsWith('image/')
+    ? `<img class="jf-thumb" src="${file.dataUrl}">`
+    : `📄`;
+  return `<input type="file" id="${jfInputId(key)}" class="juris-file-input" data-key="${key}" accept="image/*,application/pdf" style="display:none;">
+    <div style="display:flex; align-items:center; gap:6px;">
+      ${preview}
+      <span class="jf-name">${escapeHtml(file.name)}</span>
+      <button type="button" class="btn btn-icon btn-sm juris-file-remove" data-key="${key}" title="Quitar">✕</button>
+    </div>`;
+}
 
 function renderJurisFields(){
   const container = document.getElementById('jurisContainer');
   container.innerHTML = '';
   for(const j of jurisConfig){
-    const data = formJuris[j.key] || {montoPatente:'', montoMultas:'', fechaConsulta:''};
+    const data = formJuris[j.key] || {};
     const row = document.createElement('div');
     row.className = 'juris-row';
     const hasPatente = j.urlPatente && j.urlPatente.trim();
@@ -840,36 +878,140 @@ function renderJurisFields(){
       <div class="juris-head">
         <div class="juris-name">${escapeHtml(j.name)}</div>
       </div>
-      <div class="juris-fields">
+      <div class="juris-fields juris-fields-3">
         <div>
           <label>Monto patentes</label>
-          <input type="number" step="0.01" data-key="${j.key}" data-field="montoPatente" value="${data.montoPatente||''}" placeholder="0">
+          <input type="text" inputmode="decimal" class="money-input" data-key="${j.key}" data-field="montoPatente" value="${formatMoneyDisplay(data.montoPatente)}" placeholder="$ 0,00">
           ${hasPatente
             ? `<a class="juris-link" href="${escapeHtml(j.urlPatente)}" target="_blank" rel="noopener">Abrir patentes ↗</a>`
             : `<span class="juris-link disabled">Sin link de patentes</span>`}
         </div>
         <div>
-          <label>Monto multas</label>
-          <input type="number" step="0.01" data-key="${j.key}" data-field="montoMultas" value="${data.montoMultas||''}" placeholder="0">
+          <label>Multas en página</label>
+          <input type="text" inputmode="decimal" class="money-input" data-key="${j.key}" data-field="montoMultasPagina" value="${formatMoneyDisplay(data.montoMultasPagina)}" placeholder="$ 0,00">
           ${hasMultas
             ? `<a class="juris-link" href="${escapeHtml(j.urlMultas)}" target="_blank" rel="noopener">Abrir multas ↗</a>`
             : `<span class="juris-link disabled">Sin link de multas</span>`}
         </div>
         <div>
+          <label>Multas en SUAT</label>
+          <input type="text" inputmode="decimal" class="money-input" data-key="${j.key}" data-field="montoMultasSuat" value="${formatMoneyDisplay(data.montoMultasSuat)}" placeholder="$ 0,00">
+          <a class="juris-link" href="${SUAT_URL}" target="_blank" rel="noopener">Abrir SUAT ↗</a>
+        </div>
+      </div>
+      <div class="juris-fields juris-fields-3" style="margin-top:9px;">
+        <div>
+          <label>Cobramos al cliente</label>
+          <input type="text" inputmode="decimal" class="money-input" data-key="${j.key}" data-field="montoCobrado" value="${formatMoneyDisplay(data.montoCobrado)}" placeholder="$ 0,00">
+        </div>
+        <div>
+          <label>Pagamos</label>
+          <input type="text" inputmode="decimal" class="money-input" data-key="${j.key}" data-field="montoPagado" value="${formatMoneyDisplay(data.montoPagado)}" placeholder="$ 0,00">
+        </div>
+        <div>
+          <label>Fecha de pago</label>
+          <input type="date" data-key="${j.key}" data-field="fechaPago" value="${data.fechaPago||''}">
+        </div>
+      </div>
+      <div class="juris-fields juris-fields-2" style="margin-top:9px;">
+        <div>
           <label>Fecha consulta</label>
           <input type="date" data-key="${j.key}" data-field="fechaConsulta" value="${data.fechaConsulta||''}">
+        </div>
+        <div>
+          <label>Comprobante</label>
+          <div class="juris-filebox" id="jfb-${j.key}">
+            ${renderJurisFileBoxInner(j.key, data.comprobante)}
+          </div>
         </div>
       </div>
     `;
     container.appendChild(row);
   }
-  container.querySelectorAll('input').forEach(inp=>{
+  attachJurisListeners();
+}
+
+function attachJurisListeners(){
+  document.querySelectorAll('.money-input').forEach(inp=>{
+    inp.addEventListener('focus', ()=>{
+      const k = inp.dataset.key, f = inp.dataset.field;
+      const raw = (formJuris[k] && formJuris[k][f]) || '';
+      inp.value = raw;
+      inp.select();
+    });
+    inp.addEventListener('blur', ()=>{
+      const k = inp.dataset.key, f = inp.dataset.field;
+      const raw = parseMoneyInput(inp.value);
+      if(!formJuris[k]) formJuris[k] = {};
+      formJuris[k][f] = raw;
+      inp.value = formatMoneyDisplay(raw);
+    });
+  });
+  document.querySelectorAll('.juris-fields input[type=date]').forEach(inp=>{
     inp.addEventListener('input', ()=>{
       const k = inp.dataset.key, f = inp.dataset.field;
       if(!formJuris[k]) formJuris[k] = {};
       formJuris[k][f] = inp.value;
     });
   });
+  document.querySelectorAll('.juris-file-input').forEach(inp=>{
+    inp.addEventListener('change', (e)=>handleJurisFile(e, inp.dataset.key));
+  });
+  document.querySelectorAll('.juris-file-remove').forEach(btn=>{
+    btn.onclick = ()=>{
+      const k = btn.dataset.key;
+      if(!formJuris[k]) formJuris[k] = {};
+      formJuris[k].comprobante = null;
+      updateJurisFileBox(k);
+    };
+  });
+}
+
+function updateJurisFileBox(key){
+  const box = document.getElementById('jfb-' + key);
+  if(!box) return;
+  box.innerHTML = renderJurisFileBoxInner(key, (formJuris[key] && formJuris[key].comprobante) || null);
+  const inp = document.getElementById(jfInputId(key));
+  if(inp) inp.addEventListener('change', (e)=>handleJurisFile(e, key));
+  const rmBtn = box.querySelector('.juris-file-remove');
+  if(rmBtn) rmBtn.onclick = ()=>{
+    if(!formJuris[key]) formJuris[key] = {};
+    formJuris[key].comprobante = null;
+    updateJurisFileBox(key);
+  };
+}
+
+async function handleJurisFile(e, key){
+  const file = e.target.files[0];
+  if(!file) return;
+  const nameLower = (file.name||'').toLowerCase();
+  if(nameLower.endsWith('.heic') || nameLower.endsWith('.heif')){
+    showToast('Las fotos HEIC de iPhone no se pueden procesar. Cambiá a "Formato: Más compatible" en Ajustes > Cámara, o convertila a JPG.');
+    e.target.value = '';
+    return;
+  }
+  try{
+    if(!formJuris[key]) formJuris[key] = {};
+    if(file.type.startsWith('image/')){
+      const compressed = await compressImage(file);
+      formJuris[key].comprobante = compressed;
+      showToast('Comprobante adjuntado (~' + Math.round(compressed.approxBytes/1024) + ' KB)');
+    } else if(file.type === 'application/pdf'){
+      if(file.size > 3.5*1024*1024){
+        showToast('El PDF pesa ' + Math.round(file.size/1024/1024*10)/10 + 'MB, subí uno de menos de 3.5MB');
+        return;
+      }
+      const dataUrl = await fileToDataUrl(file);
+      formJuris[key].comprobante = {name:file.name, type:file.type, dataUrl};
+    } else {
+      showToast('Solo se aceptan imágenes o PDF');
+      return;
+    }
+    updateJurisFileBox(key);
+  }catch(err){
+    console.error(err);
+    showToast(err.message || 'No se pudo procesar el archivo');
+  }
 }
 
 document.getElementById('btnAddCustomJuris').onclick = async ()=>{
@@ -893,13 +1035,9 @@ function resetForm(){
   document.getElementById('fMarca').value = '';
   document.getElementById('fModelo').value = '';
   document.getElementById('fRegistro').value = '';
-  document.getElementById('fFechaPago').value = '';
   document.getElementById('fObs').value = '';
   formJuris = {};
-  currentFile = null;
-  renderFileBox();
   setTipo('Nuestro');
-  setPago('Cliente');
   renderJurisFields();
 }
 
@@ -912,20 +1050,8 @@ function setTipo(val){
     }
   });
 }
-function setPago(val){
-  pagoSel = val;
-  document.querySelectorAll('#pagoGroup .radio-opt').forEach(el=>{
-    el.classList.remove('active-cliente','active-nosotros');
-    if(el.dataset.val === val){
-      el.classList.add(val==='Cliente' ? 'active-cliente' : 'active-nosotros');
-    }
-  });
-}
 document.querySelectorAll('#tipoGroup .radio-opt').forEach(el=>{
   el.onclick = ()=>setTipo(el.dataset.val);
-});
-document.querySelectorAll('#pagoGroup .radio-opt').forEach(el=>{
-  el.onclick = ()=>setPago(el.dataset.val);
 });
 
 function openVehiculoModal(dominio){
@@ -942,13 +1068,9 @@ function openVehiculoModal(dominio){
       document.getElementById('fMarca').value = rec.marca || '';
       document.getElementById('fModelo').value = rec.modelo || '';
       document.getElementById('fRegistro').value = rec.registro || '';
-      document.getElementById('fFechaPago').value = rec.fechaPago || '';
       document.getElementById('fObs').value = rec.observaciones || '';
       formJuris = JSON.parse(JSON.stringify(rec.jurisdicciones || {}));
-      currentFile = rec.documento || null;
       setTipo(rec.tipo || 'Nuestro');
-      setPago(rec.quienPaga || 'Cliente');
-      renderFileBox();
       renderJurisFields();
     }
   }
@@ -965,41 +1087,7 @@ document.getElementById('fDominio').addEventListener('input', (e)=>{
   e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
 });
 
-/* ===================== FILE HANDLING ===================== */
-const fileBox = document.getElementById('fileBox');
-const fFile = document.getElementById('fFile');
-
-fFile.addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const nameLower = (file.name||'').toLowerCase();
-  if(nameLower.endsWith('.heic') || nameLower.endsWith('.heif')){
-    showToast('Las fotos HEIC de iPhone no se pueden procesar. Cambiá a "Formato: Más compatible" en Ajustes > Cámara, o convertila a JPG.');
-    fFile.value = '';
-    return;
-  }
-  try{
-    if(file.type.startsWith('image/')){
-      currentFile = await compressImage(file);
-      showToast('Foto adjuntada y comprimida (~' + Math.round(currentFile.approxBytes/1024) + ' KB)');
-    } else if(file.type === 'application/pdf'){
-      if(file.size > 3.5*1024*1024){
-        showToast('El PDF pesa ' + Math.round(file.size/1024/1024*10)/10 + 'MB, subí uno de menos de 3.5MB');
-        return;
-      }
-      const dataUrl = await fileToDataUrl(file);
-      currentFile = {name:file.name, type:file.type, dataUrl};
-    } else {
-      showToast('Solo se aceptan imágenes o PDF');
-      return;
-    }
-    renderFileBox();
-  }catch(err){
-    console.error(err);
-    showToast(err.message || 'No se pudo procesar el archivo');
-  }
-});
-
+/* ===================== FILE HANDLING (utilidades compartidas por cada jurisdicción) ===================== */
 function fileToDataUrl(file){
   return new Promise((resolve, reject)=>{
     const r = new FileReader();
@@ -1052,38 +1140,6 @@ function compressImage(file){
   });
 }
 
-function renderFileBox(){
-  const content = document.getElementById('fileBoxContent');
-  if(!currentFile){
-    fileBox.classList.remove('has-file');
-    content.innerHTML = `<label class="fb-label" for="fFile">📎 Tocá para adjuntar una foto o PDF del comprobante</label>`;
-    return;
-  }
-  fileBox.classList.add('has-file');
-  if(currentFile.type.startsWith('image/')){
-    content.innerHTML = `
-      <div class="fb-preview">
-        <img class="thumb" src="${currentFile.dataUrl}">
-        <div style="text-align:left;">
-          <div style="font-size:12.5px; font-weight:600;">${escapeHtml(currentFile.name)}</div>
-          <button class="btn btn-outline btn-sm" type="button" id="btnRemoveFile" style="margin-top:6px;">Quitar</button>
-        </div>
-      </div>`;
-  } else {
-    content.innerHTML = `
-      <div class="fb-preview">
-        <div class="pdf-chip">📄 ${escapeHtml(currentFile.name)}</div>
-        <button class="btn btn-outline btn-sm" type="button" id="btnRemoveFile">Quitar</button>
-      </div>`;
-  }
-  document.getElementById('btnRemoveFile').onclick = (ev)=>{
-    ev.preventDefault(); ev.stopPropagation();
-    currentFile = null;
-    fFile.value = '';
-    renderFileBox();
-  };
-}
-
 /* ===================== SAVE / DELETE VEHÍCULO ===================== */
 document.getElementById('btnSaveVehiculo').onclick = async ()=>{
   const dominio = document.getElementById('fDominio').value.trim();
@@ -1097,9 +1153,6 @@ document.getElementById('btnSaveVehiculo').onclick = async ()=>{
     registro: document.getElementById('fRegistro').value.trim(),
     tipo: tipoSel,
     jurisdicciones: formJuris,
-    quienPaga: pagoSel,
-    fechaPago: document.getElementById('fFechaPago').value,
-    documento: currentFile,
     observaciones: document.getElementById('fObs').value.trim(),
     actualizado: new Date().toISOString(),
   };
@@ -1110,7 +1163,7 @@ document.getElementById('btnSaveVehiculo').onclick = async ()=>{
   const payload = JSON.stringify(rec);
   const approxKB = Math.round(payload.length / 1024);
   if(payload.length > 4.3 * 1024 * 1024){
-    showToast('El registro pesa ~' + approxKB + 'KB, es demasiado. Quitá el comprobante o adjuntá uno más liviano.');
+    showToast('El registro pesa ~' + approxKB + 'KB, es demasiado. Quitá alguno de los comprobantes o adjuntá uno más liviano.');
     btn.disabled = false; btn.textContent = 'Guardar vehículo';
     return;
   }
