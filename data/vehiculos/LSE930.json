@@ -1,0 +1,24 @@
+{
+  "dominio": "LSE930",
+  "anio": "2012",
+  "marca": "CHEVROLET",
+  "modelo": "AGILE 1.4 LS SPIRIT",
+  "registro": "SANTA FE N° 1 (21023)",
+  "tipo": "Nuestro",
+  "jurisdicciones": {
+    "sf_ciudad": {
+      "montoMultas": "0",
+      "fechaConsulta": "2026-08-20"
+    },
+    "sf_provincia": {
+      "montoPatente": "311630",
+      "montoMultas": "340350",
+      "fechaConsulta": "2026-08-20"
+    }
+  },
+  "quienPaga": "Cliente",
+  "fechaPago": "",
+  "documento": null,
+  "observaciones": "",
+  "actualizado": "2026-08-20T17:29:21.474Z"
+}
