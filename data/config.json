@@ -1,0 +1,44 @@
+[
+  {
+    "key": "sf_ciudad",
+    "name": "Santa Fe Ciudad",
+    "urlPatente": "",
+    "urlMultas": "https://tribunalweb.santafeciudad.gov.ar/"
+  },
+  {
+    "key": "sf_provincia",
+    "name": "Santa Fe Provincia",
+    "urlPatente": "https://www.santafe.gov.ar/e-pt-liq-deuda/",
+    "urlMultas": "https://www.santafe.gob.ar/juzgadovirtual/consultaInfraccion.do?method=consultarPorVehiculo"
+  },
+  {
+    "key": "caba",
+    "name": "Buenos Aires Ciudad",
+    "urlPatente": "",
+    "urlMultas": "https://buenosaires.gob.ar/licenciasdeconducir/consulta-de-infracciones/?actas=transito"
+  },
+  {
+    "key": "ba_provincia",
+    "name": "Buenos Aires Provincia",
+    "urlPatente": "",
+    "urlMultas": "https://infraccionesba.gba.gob.ar/consulta-infraccion"
+  },
+  {
+    "key": "entre_rios",
+    "name": "Entre Ríos",
+    "urlPatente": "",
+    "urlMultas": "https://monitoreovialentrerios.info/#/consulta-infracciones"
+  },
+  {
+    "key": "cordoba",
+    "name": "Córdoba",
+    "urlPatente": "https://www.rentascordoba.gob.ar/emision/ver-y-pagar/caminera",
+    "urlMultas": "https://www.rentascordoba.gob.ar/emision/ver-y-pagar/caminera"
+  },
+  {
+    "key": "misiones",
+    "name": "Misiones",
+    "urlPatente": "",
+    "urlMultas": "https://monitoreovialmisiones.info/#/"
+  }
+]
