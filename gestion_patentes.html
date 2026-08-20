@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Patentes y Multas — FyF Automotores</title>
+<style>
+  :root{
+    --graphite:#1C2530;
+    --graphite-2:#293445;
+    --steel:#2F6690;
+    --steel-light:#EAF1F6;
+    --amber:#E8A33D;
+    --amber-bg:#FCF1DD;
+    --sage:#3F9469;
+    --sage-bg:#E7F4EC;
+    --red:#C1503A;
+    --red-bg:#FBEAE6;
+    --bg:#F4F5F3;
+    --card:#FFFFFF;
+    --line:#E2E5E1;
+    --text:#1C2530;
+    --text-mut:#6B7280;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{font-family:'Space Grotesk','Inter',sans-serif;}
+  .mono{font-family:'IBM Plex Mono','Courier New',monospace;}
+
+  header.top{
+    background:var(--graphite);
+    color:#fff;
+    padding:20px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    position:sticky;
+    top:0;
+    z-index:30;
+  }
+  header.top h1{
+    font-size:19px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  header.top .sub{font-size:12px; color:#9AA7B5; margin-top:2px;}
+  .top-actions{display:flex; gap:8px; align-items:center;}
+
+  .btn{
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:transform .08s ease, opacity .15s ease;
+    font-family:inherit;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--amber); color:#2A1D08;}
+  .btn-primary:hover{opacity:.92;}
+  .btn-ghost{background:rgba(255,255,255,0.08); color:#fff;}
+  .btn-ghost:hover{background:rgba(255,255,255,0.15);}
+  .btn-outline{background:#fff; color:var(--graphite); border:1px solid var(--line);}
+  .btn-outline:hover{border-color:var(--steel); color:var(--steel);}
+  .btn-danger{background:var(--red-bg); color:var(--red);}
+  .btn-sm{padding:6px 10px; font-size:12px; border-radius:6px;}
+  .btn-icon{background:transparent; padding:6px; border-radius:6px;}
+  .btn-icon:hover{background:var(--line);}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  main{max-width:1180px; margin:0 auto; padding:22px 20px 80px;}
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px,1fr));
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .stat{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .stat .label{font-size:11.5px; color:var(--text-mut); text-transform:uppercase; letter-spacing:.05em; font-weight:600;}
+  .stat .value{font-size:23px; font-weight:700; margin-top:4px;}
+  .stat.warn .value{color:var(--red);}
+  .stat.ok .value{color:var(--sage);}
+
+  .toolbar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .search{
+    flex:1; min-width:200px;
+    position:relative;
+  }
+  .search input{
+    width:100%;
+    padding:10px 12px 10px 34px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    font-size:14px;
+    background:#fff;
+    font-family:inherit;
+  }
+  .search svg{position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:.45;}
+  select.filter{
+    padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    font-size:13.5px; background:#fff; font-family:inherit; color:var(--text);
+  }
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:14px;}
+
+  .vcard{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .vcard-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+
+  .plate{
+    display:inline-flex;
+    border-radius:5px;
+    overflow:hidden;
+    border:1.5px solid #111;
+    box-shadow:0 1px 0 rgba(0,0,0,.15);
+    height:34px;
+  }
+  .plate .band{
+    background:#1450A3;
+    width:16px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff;
+  }
+  .plate .band .stars{font-size:5px; letter-spacing:1px; line-height:1;}
+  .plate .num{
+    background:#fff;
+    color:#111;
+    font-weight:700;
+    font-size:15px;
+    padding:0 9px;
+    display:flex; align-items:center;
+    letter-spacing:1.5px;
+  }
+
+  .vinfo{font-size:13px; color:var(--text-mut);}
+  .vinfo b{color:var(--text); font-weight:600;}
+
+  .pills{display:flex; gap:6px; flex-wrap:wrap;}
+  .pill{
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:99px;
+    text-transform:uppercase; letter-spacing:.03em;
+  }
+  .pill-blue{background:var(--steel-light); color:var(--steel);}
+  .pill-purple{background:#EFEAFB; color:#6B4FBB;}
+  .pill-sage{background:var(--sage-bg); color:var(--sage);}
+  .pill-amber{background:var(--amber-bg); color:#93650F;}
+  .pill-red{background:var(--red-bg); color:var(--red);}
+  .pill-gray{background:#EEF0EE; color:var(--text-mut);}
+
+  .vcard-debt{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-top:1px dashed var(--line); padding-top:10px;
+  }
+  .vcard-debt .amount{font-size:20px; font-weight:700;}
+  .vcard-debt .amount.zero{color:var(--sage);}
+  .vcard-debt .amount.pos{color:var(--red);}
+  .vcard-debt .lbl{font-size:11px; color:var(--text-mut); text-transform:uppercase; letter-spacing:.04em;}
+
+  .vcard-actions{display:flex; gap:8px;}
+  .vcard-actions .btn{flex:1; justify-content:center;}
+
+  .empty{
+    text-align:center; padding:60px 20px; color:var(--text-mut);
+  }
+  .empty svg{opacity:.35; margin-bottom:10px;}
+  .empty h3{color:var(--text); margin:0 0 6px;}
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,25,32,.55);
+    display:none; align-items:flex-start; justify-content:center;
+    padding:26px 14px; z-index:100; overflow-y:auto;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:#fff; border-radius:14px; width:100%; max-width:680px;
+    max-height:calc(100vh - 52px);
+    display:flex; flex-direction:column;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);
+  }
+  .modal.small{max-width:520px;}
+  .modal-header{
+    padding:18px 22px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .modal-header h2{font-size:17px; margin:0;}
+  .modal-body{padding:20px 22px; overflow-y:auto;}
+  .modal-footer{
+    padding:16px 22px; border-top:1px solid var(--line);
+    display:flex; justify-content:flex-end; gap:10px;
+  }
+
+  .section-title{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--steel); margin:22px 0 10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title:first-child{margin-top:0;}
+  .section-title .line{flex:1; height:1px; background:var(--line);}
+
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block; font-size:12.5px; font-weight:600; color:var(--text-mut); margin-bottom:5px;
+  }
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:7px;
+    font-size:14px; font-family:inherit; color:var(--text); background:#fff;
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .row3{display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px;}
+
+  .radio-group{display:flex; gap:8px;}
+  .radio-opt{
+    flex:1; border:1.5px solid var(--line); border-radius:8px; padding:10px;
+    text-align:center; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--text-mut);
+    transition:all .12s ease;
+  }
+  .radio-opt.active-nuestro{border-color:var(--steel); background:var(--steel-light); color:var(--steel);}
+  .radio-opt.active-consig{border-color:#6B4FBB; background:#EFEAFB; color:#6B4FBB;}
+  .radio-opt.active-cliente{border-color:var(--amber); background:var(--amber-bg); color:#93650F;}
+  .radio-opt.active-nosotros{border-color:var(--sage); background:var(--sage-bg); color:var(--sage);}
+
+  .juris-row{
+    border:1px solid var(--line); border-radius:9px; padding:12px; margin-bottom:9px;
+  }
+  .juris-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:9px;}
+  .juris-name{font-weight:700; font-size:13.5px;}
+  .juris-link{font-size:12px; color:var(--steel); text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:600;}
+  .juris-link:hover{text-decoration:underline;}
+  .juris-link.disabled{color:var(--text-mut); pointer-events:none; text-decoration:none;}
+  .juris-fields{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .juris-fields label{font-size:10.5px; color:var(--text-mut); font-weight:600; display:block; margin-bottom:3px;}
+  .juris-fields input{width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit;}
+
+  .dnrpa-tip{
+    background:var(--steel-light); border-radius:8px; padding:10px 12px; font-size:12.5px;
+    color:var(--graphite-2); display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px;
+  }
+  .dnrpa-tip code{background:#fff; padding:2px 6px; border-radius:4px; font-weight:600;}
+
+  .filebox{
+    border:1.5px dashed var(--line); border-radius:9px; padding:16px; text-align:center;
+  }
+  .filebox.has-file{border-style:solid; border-color:var(--sage); background:var(--sage-bg);}
+  .filebox input[type=file]{display:none;}
+  .filebox .fb-label{font-size:13px; color:var(--text-mut); cursor:pointer;}
+  .filebox .fb-preview{display:flex; align-items:center; gap:10px; justify-content:center;}
+  .filebox img.thumb{max-height:70px; border-radius:6px; border:1px solid var(--line);}
+  .filebox .pdf-chip{
+    background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 12px;
+    display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600;
+  }
+
+  .settings-row{
+    display:flex; gap:8px; align-items:center; margin-bottom:10px;
+  }
+  .settings-row input{flex:1; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit;}
+  .settings-row .jname{width:150px; font-weight:600; font-size:13px; flex:none;}
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--graphite); color:#fff; padding:11px 20px; border-radius:8px;
+    font-size:13.5px; font-weight:500; z-index:200; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+
+  .loading-screen{
+    text-align:center; padding:80px 20px; color:var(--text-mut); font-size:14px;
+  }
+
+  @media (max-width:520px){
+    .row2, .row3, .juris-fields{grid-template-columns:1fr;}
+    header.top{padding:16px;}
+    main{padding:16px 12px 70px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1 class="display">Control de Patentes &amp; Multas</h1>
+    <div class="sub">FyF Automotores</div>
+  </div>
+  <div class="top-actions">
+    <button class="btn btn-ghost btn-icon" id="btnSettings" title="Configurar links de jurisdicciones">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.11.35.29.68.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <button class="btn btn-primary" id="btnAdd">+ Agregar vehículo</button>
+  </div>
+</header>
+
+<main>
+  <div id="loadingScreen" class="loading-screen">Cargando datos…</div>
+
+  <div id="appBody" style="display:none;">
+    <div class="stats">
+      <div class="stat">
+        <div class="label">Vehículos</div>
+        <div class="value" id="statTotal">0</div>
+      </div>
+      <div class="stat warn">
+        <div class="label">Deuda total</div>
+        <div class="value" id="statDeuda">$0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Consignación</div>
+        <div class="value" id="statConsig">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Pagos pendientes</div>
+        <div class="value" id="statPend">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Buscar por dominio, marca o modelo…">
+      </div>
+      <select class="filter" id="filterTipo">
+        <option value="">Todos los tipos</option>
+        <option value="Nuestro">Nuestro</option>
+        <option value="Consignación">Consignación</option>
+      </select>
+      <select class="filter" id="filterPago">
+        <option value="">Todos los pagos</option>
+        <option value="Pagado - Cliente">Pagado - Cliente</option>
+        <option value="Pagado - Nosotros">Pagado - Nosotros</option>
+        <option value="Pendiente">Pendiente</option>
+      </select>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="emptyState" class="empty" style="display:none;">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13"/><path d="M3 13h18v5a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-5z"/><circle cx="7.5" cy="16.5" r="1.2"/><circle cx="16.5" cy="16.5" r="1.2"/></svg>
+      <h3>Todavía no cargaste vehículos</h3>
+      <div>Hacé clic en "Agregar vehículo" para empezar.</div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Vehículo -->
+<div class="overlay" id="modalVehiculo">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Agregar vehículo</h2>
+      <button class="btn btn-icon" id="closeModal">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="section-title">Datos del vehículo <div class="line"></div></div>
+      <div class="row2">
+        <div class="field">
+          <label>Dominio</label>
+          <input type="text" id="fDominio" placeholder="AB372CD" style="text-transform:uppercase;">
+        </div>
+        <div class="field">
+          <label>Año</label>
+          <input type="text" id="fAnio" placeholder="2022">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Marca</label>
+          <input type="text" id="fMarca" placeholder="Fiat">
+        </div>
+        <div class="field">
+          <label>Modelo</label>
+          <input type="text" id="fModelo" placeholder="Cronos">
+        </div>
+      </div>
+      <div class="dnrpa-tip">
+        <div>Para ver marca/modelo/año: abrí <b>Informes Online</b> del DNRPA, cargá el CUIL <code>20374457757</code> y después el dominio.</div>
+        <a class="btn btn-outline btn-sm" style="white-space:nowrap;" href="https://www2.jus.gov.ar/dnrpa-site/#!/" target="_blank" rel="noopener">Abrir DNRPA ↗</a>
+      </div>
+
+      <div class="section-title">Tipo de vehículo <div class="line"></div></div>
+      <div class="radio-group" id="tipoGroup">
+        <div class="radio-opt" data-val="Nuestro">Nuestro</div>
+        <div class="radio-opt" data-val="Consignación">Consignación</div>
+      </div>
+
+      <div class="section-title">Deudas por jurisdicción <div class="line"></div></div>
+      <div id="jurisContainer"></div>
+      <button class="btn btn-outline btn-sm" id="btnAddCustomJuris" type="button">+ Agregar otra jurisdicción</button>
+
+      <div class="section-title">Pago <div class="line"></div></div>
+      <div class="radio-group" id="pagoGroup">
+        <div class="radio-opt" data-val="Cliente">Paga el cliente</div>
+        <div class="radio-opt" data-val="Nosotros">Pagamos nosotros</div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Fecha de pago</label>
+        <input type="date" id="fFechaPago">
+      </div>
+
+      <div class="section-title">Comprobante de pago <div class="line"></div></div>
+      <div class="filebox" id="fileBox">
+        <input type="file" id="fFile" accept="image/*,application/pdf">
+        <div id="fileBoxContent">
+          <label class="fb-label" for="fFile">📎 Tocá para adjuntar una foto o PDF del comprobante</label>
+        </div>
+      </div>
+
+      <div class="section-title">Observaciones <div class="line"></div></div>
+      <div class="field">
+        <textarea id="fObs" placeholder="Notas internas…"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="btnCancelVehiculo">Cancelar</button>
+      <button class="btn btn-primary" id="btnSaveVehiculo">Guardar vehículo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Settings -->
+<div class="overlay" id="modalSettings">
+  <div class="modal small">
+    <div class="modal-header">
+      <h2>Links de consulta por jurisdicción</h2>
+      <button class="btn btn-icon" id="closeSettings">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px; color:var(--text-mut); margin-top:0;">Pegá acá el link oficial de cada jurisdicción. Se guarda para todos los vehículos.</p>
+      <div id="settingsList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="closeSettings2">Cerrar</button>
+      <button class="btn btn-primary" id="btnSaveSettings">Guardar links</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const DEFAULT_JURIS = [
+  { key: "sf_ciudad",  name: "Santa Fe Ciudad",       url: "" },
+  { key: "sf_provincia", name: "Santa Fe Provincia",  url: "https://www.santafe.gov.ar/e-pt-liq-deuda/" },
+  { key: "caba",        name: "Buenos Aires Ciudad",  url: "" },
+  { key: "ba_provincia", name: "Buenos Aires Provincia", url: "" },
+  { key: "entre_rios",  name: "Entre Ríos",           url: "" },
+  { key: "cordoba",     name: "Córdoba",               url: "" },
+  { key: "misiones",    name: "Misiones",              url: "" },
+];
+
+let jurisConfig = [];   // [{key,name,url}]
+let vehiculos = [];     // full records
+let editingDominio = null;
+let currentFile = null; // {name, type, dataUrl}
+let tipoSel = "Nuestro";
+let pagoSel = "Cliente";
+
+/* ===================== STORAGE HELPERS ===================== */
+async function storageGet(key){
+  try{
+    const r = await window.storage.get(key, true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  try{
+    await window.storage.set(key, JSON.stringify(value), true);
+    return true;
+  }catch(e){ console.error("storage.set failed", key, e); return false; }
+}
+async function storageDelete(key){
+  try{ await window.storage.delete(key, true); }catch(e){}
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ===================== INIT ===================== */
+async function init(){
+  jurisConfig = await storageGet('config:jurisdicciones');
+  if(!jurisConfig){
+    jurisConfig = DEFAULT_JURIS.slice();
+    await storageSet('config:jurisdicciones', jurisConfig);
+  }
+
+  const index = await storageGet('vehiculos:index') || [];
+  vehiculos = [];
+  for(const dominio of index){
+    const rec = await storageGet('vehiculo:' + dominio);
+    if(rec) vehiculos.push(rec);
+  }
+
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('appBody').style.display = 'block';
+  renderGrid();
+}
+
+/* ===================== MONEY / TOTALS ===================== */
+function vehiculoTotalDeuda(rec){
+  let total = 0;
+  for(const j of Object.values(rec.jurisdicciones || {})){
+    total += (parseFloat(j.montoPatente) || 0) + (parseFloat(j.montoMultas) || 0);
+  }
+  return total;
+}
+function fmtMoney(n){
+  return '$' + (n || 0).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+/* ===================== RENDER GRID ===================== */
+function renderGrid(){
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const fTipo = document.getElementById('filterTipo').value;
+  const fPago = document.getElementById('filterPago').value;
+
+  let list = vehiculos.filter(v=>{
+    if(search){
+      const hay = (v.dominio+' '+v.marca+' '+v.modelo).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    if(fTipo && v.tipo !== fTipo) return false;
+    if(fPago && estadoPago(v) !== fPago) return false;
+    return true;
+  });
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  document.getElementById('emptyState').style.display = (vehiculos.length===0) ? 'block' : 'none';
+
+  list.sort((a,b)=> (a.dominio||'').localeCompare(b.dominio||''));
+
+  for(const v of list){
+    grid.appendChild(vehiculoCard(v));
+  }
+
+  // stats
+  document.getElementById('statTotal').textContent = vehiculos.length;
+  const deudaTotal = vehiculos.reduce((s,v)=>s+vehiculoTotalDeuda(v), 0);
+  document.getElementById('statDeuda').textContent = fmtMoney(deudaTotal);
+  document.getElementById('statConsig').textContent = vehiculos.filter(v=>v.tipo==='Consignación').length;
+  document.getElementById('statPend').textContent = vehiculos.filter(v=>estadoPago(v)==='Pendiente').length;
+}
+
+function estadoPago(v){
+  if(v.fechaPago && v.quienPaga){
+    return 'Pagado - ' + v.quienPaga;
+  }
+  return 'Pendiente';
+}
+
+function vehiculoCard(v){
+  const div = document.createElement('div');
+  div.className = 'vcard';
+  const deuda = vehiculoTotalDeuda(v);
+  const estado = estadoPago(v);
+  let estadoPill = '';
+  if(estado === 'Pendiente') estadoPill = '<span class="pill pill-red">Pago pendiente</span>';
+  else estadoPill = '<span class="pill pill-sage">'+estado+'</span>';
+
+  const tipoPill = v.tipo === 'Consignación'
+    ? '<span class="pill pill-purple">Consignación</span>'
+    : '<span class="pill pill-blue">Nuestro</span>';
+
+  const docPill = v.documento ? '<span class="pill pill-gray">📎 Comprobante</span>' : '';
+
+  div.innerHTML = `
+    <div class="vcard-top">
+      <div class="plate">
+        <div class="band"><div class="stars">★★★★</div><div style="writing-mode:vertical-rl; font-size:6px; font-weight:700;">RA</div></div>
+        <div class="num mono">${escapeHtml(v.dominio || '—')}</div>
+      </div>
+      <div class="pills">${tipoPill}</div>
+    </div>
+    <div class="vinfo"><b>${escapeHtml(v.marca||'Sin marca')} ${escapeHtml(v.modelo||'')}</b> ${v.anio? '· '+escapeHtml(v.anio):''}</div>
+    <div class="pills">${estadoPill} ${docPill}</div>
+    <div class="vcard-debt">
+      <div><div class="lbl">Deuda total (patentes+multas)</div><div class="amount ${deuda>0?'pos':'zero'}">${fmtMoney(deuda)}</div></div>
+    </div>
+    <div class="vcard-actions">
+      <button class="btn btn-outline btn-sm btn-edit">Editar</button>
+      <button class="btn btn-danger btn-sm btn-del">Eliminar</button>
+    </div>
+  `;
+  div.querySelector('.btn-edit').onclick = ()=>openVehiculoModal(v.dominio);
+  div.querySelector('.btn-del').onclick = ()=>deleteVehiculo(v.dominio);
+  return div;
+}
+
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ===================== JURISDICCIONES EN FORM ===================== */
+let formJuris = {}; // key -> {montoPatente, montoMultas, fechaConsulta}
+
+function renderJurisFields(){
+  const container = document.getElementById('jurisContainer');
+  container.innerHTML = '';
+  for(const j of jurisConfig){
+    const data = formJuris[j.key] || {montoPatente:'', montoMultas:'', fechaConsulta:''};
+    const row = document.createElement('div');
+    row.className = 'juris-row';
+    const hasUrl = j.url && j.url.trim();
+    row.innerHTML = `
+      <div class="juris-head">
+        <div class="juris-name">${escapeHtml(j.name)}</div>
+        ${hasUrl
+          ? `<a class="juris-link" href="${escapeHtml(j.url)}" target="_blank" rel="noopener">Abrir consulta ↗</a>`
+          : `<span class="juris-link disabled">Sin link cargado</span>`}
+      </div>
+      <div class="juris-fields">
+        <div>
+          <label>Monto patentes</label>
+          <input type="number" step="0.01" data-key="${j.key}" data-field="montoPatente" value="${data.montoPatente||''}" placeholder="0">
+        </div>
+        <div>
+          <label>Monto multas</label>
+          <input type="number" step="0.01" data-key="${j.key}" data-field="montoMultas" value="${data.montoMultas||''}" placeholder="0">
+        </div>
+        <div>
+          <label>Fecha consulta</label>
+          <input type="date" data-key="${j.key}" data-field="fechaConsulta" value="${data.fechaConsulta||''}">
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+  container.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const k = inp.dataset.key, f = inp.dataset.field;
+      if(!formJuris[k]) formJuris[k] = {};
+      formJuris[k][f] = inp.value;
+    });
+  });
+}
+
+document.getElementById('btnAddCustomJuris').onclick = async ()=>{
+  const name = prompt('Nombre de la jurisdicción (ej: Santa Fe Ciudad, Chaco, etc.):');
+  if(!name) return;
+  const key = 'custom_' + Date.now();
+  jurisConfig.push({key, name, url:''});
+  await storageSet('config:jurisdicciones', jurisConfig);
+  renderJurisFields();
+};
+
+/* ===================== MODAL VEHÍCULO ===================== */
+function resetForm(){
+  document.getElementById('fDominio').value = '';
+  document.getElementById('fDominio').disabled = false;
+  document.getElementById('fAnio').value = '';
+  document.getElementById('fMarca').value = '';
+  document.getElementById('fModelo').value = '';
+  document.getElementById('fFechaPago').value = '';
+  document.getElementById('fObs').value = '';
+  formJuris = {};
+  currentFile = null;
+  renderFileBox();
+  setTipo('Nuestro');
+  setPago('Cliente');
+  renderJurisFields();
+}
+
+function setTipo(val){
+  tipoSel = val;
+  document.querySelectorAll('#tipoGroup .radio-opt').forEach(el=>{
+    el.classList.remove('active-nuestro','active-consig');
+    if(el.dataset.val === val){
+      el.classList.add(val==='Nuestro' ? 'active-nuestro' : 'active-consig');
+    }
+  });
+}
+function setPago(val){
+  pagoSel = val;
+  document.querySelectorAll('#pagoGroup .radio-opt').forEach(el=>{
+    el.classList.remove('active-cliente','active-nosotros');
+    if(el.dataset.val === val){
+      el.classList.add(val==='Cliente' ? 'active-cliente' : 'active-nosotros');
+    }
+  });
+}
+document.querySelectorAll('#tipoGroup .radio-opt').forEach(el=>{
+  el.onclick = ()=>setTipo(el.dataset.val);
+});
+document.querySelectorAll('#pagoGroup .radio-opt').forEach(el=>{
+  el.onclick = ()=>setPago(el.dataset.val);
+});
+
+function openVehiculoModal(dominio){
+  resetForm();
+  editingDominio = dominio || null;
+  document.getElementById('modalTitle').textContent = dominio ? 'Editar vehículo' : 'Agregar vehículo';
+
+  if(dominio){
+    const rec = vehiculos.find(v=>v.dominio===dominio);
+    if(rec){
+      document.getElementById('fDominio').value = rec.dominio;
+      document.getElementById('fDominio').disabled = true;
+      document.getElementById('fAnio').value = rec.anio || '';
+      document.getElementById('fMarca').value = rec.marca || '';
+      document.getElementById('fModelo').value = rec.modelo || '';
+      document.getElementById('fFechaPago').value = rec.fechaPago || '';
+      document.getElementById('fObs').value = rec.observaciones || '';
+      formJuris = JSON.parse(JSON.stringify(rec.jurisdicciones || {}));
+      currentFile = rec.documento || null;
+      setTipo(rec.tipo || 'Nuestro');
+      setPago(rec.quienPaga || 'Cliente');
+      renderFileBox();
+      renderJurisFields();
+    }
+  }
+  document.getElementById('modalVehiculo').classList.add('show');
+}
+function closeVehiculoModal(){
+  document.getElementById('modalVehiculo').classList.remove('show');
+}
+document.getElementById('btnAdd').onclick = ()=>openVehiculoModal(null);
+document.getElementById('closeModal').onclick = closeVehiculoModal;
+document.getElementById('btnCancelVehiculo').onclick = closeVehiculoModal;
+
+document.getElementById('fDominio').addEventListener('input', (e)=>{
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+});
+
+/* ===================== FILE HANDLING ===================== */
+const fileBox = document.getElementById('fileBox');
+const fFile = document.getElementById('fFile');
+
+fFile.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    if(file.type.startsWith('image/')){
+      currentFile = await compressImage(file);
+    } else if(file.type === 'application/pdf'){
+      if(file.size > 4.5*1024*1024){
+        showToast('El PDF pesa más de 4.5MB, probá con uno más liviano');
+        return;
+      }
+      const dataUrl = await fileToDataUrl(file);
+      currentFile = {name:file.name, type:file.type, dataUrl};
+    } else {
+      showToast('Solo se aceptan imágenes o PDF');
+      return;
+    }
+    renderFileBox();
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo procesar el archivo');
+  }
+});
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      img.onload = ()=>{
+        const maxDim = 1600;
+        let {width, height} = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * maxDim/width); width = maxDim; }
+          else { width = Math.round(width * maxDim/height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        resolve({name:file.name.replace(/\.[^.]+$/,'')+'.jpg', type:'image/jpeg', dataUrl});
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderFileBox(){
+  const content = document.getElementById('fileBoxContent');
+  if(!currentFile){
+    fileBox.classList.remove('has-file');
+    content.innerHTML = `<label class="fb-label" for="fFile">📎 Tocá para adjuntar una foto o PDF del comprobante</label>`;
+    return;
+  }
+  fileBox.classList.add('has-file');
+  if(currentFile.type.startsWith('image/')){
+    content.innerHTML = `
+      <div class="fb-preview">
+        <img class="thumb" src="${currentFile.dataUrl}">
+        <div style="text-align:left;">
+          <div style="font-size:12.5px; font-weight:600;">${escapeHtml(currentFile.name)}</div>
+          <button class="btn btn-outline btn-sm" type="button" id="btnRemoveFile" style="margin-top:6px;">Quitar</button>
+        </div>
+      </div>`;
+  } else {
+    content.innerHTML = `
+      <div class="fb-preview">
+        <div class="pdf-chip">📄 ${escapeHtml(currentFile.name)}</div>
+        <button class="btn btn-outline btn-sm" type="button" id="btnRemoveFile">Quitar</button>
+      </div>`;
+  }
+  document.getElementById('btnRemoveFile').onclick = (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();
+    currentFile = null;
+    fFile.value = '';
+    renderFileBox();
+  };
+}
+
+/* ===================== SAVE / DELETE VEHÍCULO ===================== */
+document.getElementById('btnSaveVehiculo').onclick = async ()=>{
+  const dominio = document.getElementById('fDominio').value.trim();
+  if(!dominio){ showToast('Cargá el dominio del vehículo'); return; }
+
+  const rec = {
+    dominio,
+    anio: document.getElementById('fAnio').value.trim(),
+    marca: document.getElementById('fMarca').value.trim(),
+    modelo: document.getElementById('fModelo').value.trim(),
+    tipo: tipoSel,
+    jurisdicciones: formJuris,
+    quienPaga: pagoSel,
+    fechaPago: document.getElementById('fFechaPago').value,
+    documento: currentFile,
+    observaciones: document.getElementById('fObs').value.trim(),
+    actualizado: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('btnSaveVehiculo');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  const ok = await storageSet('vehiculo:' + dominio, rec);
+  if(!ok){
+    showToast('Error al guardar (el archivo puede ser muy pesado)');
+    btn.disabled = false; btn.textContent = 'Guardar vehículo';
+    return;
+  }
+
+  // update index
+  let index = await storageGet('vehiculos:index') || [];
+  if(!index.includes(dominio)){
+    index.push(dominio);
+    await storageSet('vehiculos:index', index);
+  }
+
+  const idx = vehiculos.findIndex(v=>v.dominio===dominio);
+  if(idx>=0) vehiculos[idx] = rec; else vehiculos.push(rec);
+
+  btn.disabled = false; btn.textContent = 'Guardar vehículo';
+  showToast('Vehículo guardado ✓');
+  closeVehiculoModal();
+  renderGrid();
+};
+
+async function deleteVehiculo(dominio){
+  if(!confirm('¿Eliminar el vehículo ' + dominio + '? Esta acción no se puede deshacer.')) return;
+  await storageDelete('vehiculo:' + dominio);
+  let index = await storageGet('vehiculos:index') || [];
+  index = index.filter(d=>d!==dominio);
+  await storageSet('vehiculos:index', index);
+  vehiculos = vehiculos.filter(v=>v.dominio!==dominio);
+  showToast('Vehículo eliminado');
+  renderGrid();
+}
+
+/* ===================== SETTINGS MODAL ===================== */
+document.getElementById('btnSettings').onclick = ()=>{
+  renderSettingsList();
+  document.getElementById('modalSettings').classList.add('show');
+};
+document.getElementById('closeSettings').onclick = ()=>document.getElementById('modalSettings').classList.remove('show');
+document.getElementById('closeSettings2').onclick = ()=>document.getElementById('modalSettings').classList.remove('show');
+
+function renderSettingsList(){
+  const list = document.getElementById('settingsList');
+  list.innerHTML = '';
+  jurisConfig.forEach((j, i)=>{
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.innerHTML = `
+      <div class="jname">${escapeHtml(j.name)}</div>
+      <input type="text" placeholder="https://…" value="${escapeHtml(j.url||'')}" data-idx="${i}">
+    `;
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('btnSaveSettings').onclick = async ()=>{
+  document.querySelectorAll('#settingsList input').forEach(inp=>{
+    jurisConfig[inp.dataset.idx].url = inp.value.trim();
+  });
+  await storageSet('config:jurisdicciones', jurisConfig);
+  showToast('Links guardados ✓');
+  document.getElementById('modalSettings').classList.remove('show');
+  renderJurisFields();
+};
+
+/* ===================== FILTERS ===================== */
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.getElementById('filterTipo').addEventListener('change', renderGrid);
+document.getElementById('filterPago').addEventListener('change', renderGrid);
+
+/* ===================== START ===================== */
+init();
+</script>
+</body>
+</html>
