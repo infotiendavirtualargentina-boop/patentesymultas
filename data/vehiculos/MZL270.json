@@ -1,0 +1,43 @@
+{
+  "dominio": "MZL270",
+  "anio": "2013",
+  "marca": "VW",
+  "modelo": "VOLKSWAGEN VENTO 2.5",
+  "registro": "SANTA FE N° 7 (21074)",
+  "tipo": "Nuestro",
+  "jurisdicciones": {
+    "sf_ciudad": {
+      "montoMultasSuat": "0",
+      "montoPatente": "466309.65",
+      "montoMultasPagina": "0"
+    },
+    "sf_provincia": {
+      "montoMultasSuat": "17876.25",
+      "montoPatente": "",
+      "montoMultasPagina": "107257.50"
+    },
+    "caba": {
+      "montoPatente": "",
+      "montoMultasPagina": "0",
+      "montoMultasSuat": "0"
+    },
+    "ba_provincia": {
+      "montoMultasSuat": "0",
+      "montoMultasPagina": "0"
+    },
+    "entre_rios": {
+      "montoMultasSuat": "0",
+      "montoMultasPagina": "0"
+    },
+    "cordoba": {
+      "montoMultasSuat": "0",
+      "montoMultasPagina": "0"
+    },
+    "misiones": {
+      "montoMultasSuat": "0",
+      "montoMultasPagina": "0"
+    }
+  },
+  "observaciones": "Tiene multas en Villa Olivari $349.758,00",
+  "actualizado": "2026-08-20T18:21:17.952Z"
+}
