@@ -402,6 +402,10 @@
           <input type="text" id="fModelo" placeholder="Cronos">
         </div>
       </div>
+      <div class="field">
+        <label>Registro (radicación)</label>
+        <input type="text" id="fRegistro" placeholder="Ej: Registro Seccional 12 - Santa Fe">
+      </div>
       <div class="dnrpa-tip">
         <div>Para ver marca/modelo/año: abrí <b>Informes Online</b> del DNRPA, cargá el CUIL <code>20374457757</code> y después el dominio.</div>
         <a class="btn btn-outline btn-sm" style="white-space:nowrap;" href="https://www2.jus.gov.ar/dnrpa-site/#!/" target="_blank" rel="noopener">Abrir DNRPA ↗</a>
@@ -551,7 +555,7 @@ function renderGrid(){
 
   let list = vehiculos.filter(v=>{
     if(search){
-      const hay = (v.dominio+' '+v.marca+' '+v.modelo).toLowerCase();
+      const hay = (v.dominio+' '+v.marca+' '+v.modelo+' '+(v.registro||'')).toLowerCase();
       if(!hay.includes(search)) return false;
     }
     if(fTipo && v.tipo !== fTipo) return false;
@@ -608,6 +612,7 @@ function vehiculoCard(v){
       <div class="pills">${tipoPill}</div>
     </div>
     <div class="vinfo"><b>${escapeHtml(v.marca||'Sin marca')} ${escapeHtml(v.modelo||'')}</b> ${v.anio? '· '+escapeHtml(v.anio):''}</div>
+    ${v.registro ? `<div class="vinfo">📍 ${escapeHtml(v.registro)}</div>` : ''}
     <div class="pills">${estadoPill} ${docPill}</div>
     <div class="vcard-debt">
       <div><div class="lbl">Deuda total (patentes+multas)</div><div class="amount ${deuda>0?'pos':'zero'}">${fmtMoney(deuda)}</div></div>
@@ -686,6 +691,7 @@ function resetForm(){
   document.getElementById('fAnio').value = '';
   document.getElementById('fMarca').value = '';
   document.getElementById('fModelo').value = '';
+  document.getElementById('fRegistro').value = '';
   document.getElementById('fFechaPago').value = '';
   document.getElementById('fObs').value = '';
   formJuris = {};
@@ -734,6 +740,7 @@ function openVehiculoModal(dominio){
       document.getElementById('fAnio').value = rec.anio || '';
       document.getElementById('fMarca').value = rec.marca || '';
       document.getElementById('fModelo').value = rec.modelo || '';
+      document.getElementById('fRegistro').value = rec.registro || '';
       document.getElementById('fFechaPago').value = rec.fechaPago || '';
       document.getElementById('fObs').value = rec.observaciones || '';
       formJuris = JSON.parse(JSON.stringify(rec.jurisdicciones || {}));
@@ -764,12 +771,19 @@ const fFile = document.getElementById('fFile');
 fFile.addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
+  const nameLower = (file.name||'').toLowerCase();
+  if(nameLower.endsWith('.heic') || nameLower.endsWith('.heif')){
+    showToast('Las fotos HEIC de iPhone no se pueden procesar. Cambiá a "Formato: Más compatible" en Ajustes > Cámara, o convertila a JPG.');
+    fFile.value = '';
+    return;
+  }
   try{
     if(file.type.startsWith('image/')){
       currentFile = await compressImage(file);
+      showToast('Foto adjuntada y comprimida (~' + Math.round(currentFile.approxBytes/1024) + ' KB)');
     } else if(file.type === 'application/pdf'){
-      if(file.size > 4.5*1024*1024){
-        showToast('El PDF pesa más de 4.5MB, probá con uno más liviano');
+      if(file.size > 3.5*1024*1024){
+        showToast('El PDF pesa ' + Math.round(file.size/1024/1024*10)/10 + 'MB, subí uno de menos de 3.5MB');
         return;
       }
       const dataUrl = await fileToDataUrl(file);
@@ -781,7 +795,7 @@ fFile.addEventListener('change', async (e)=>{
     renderFileBox();
   }catch(err){
     console.error(err);
-    showToast('No se pudo procesar el archivo');
+    showToast(err.message || 'No se pudo procesar el archivo');
   }
 });
 
@@ -796,24 +810,40 @@ function fileToDataUrl(file){
 
 function compressImage(file){
   return new Promise((resolve, reject)=>{
-    const img = new Image();
     const reader = new FileReader();
     reader.onload = (e)=>{
+      const img = new Image();
       img.onload = ()=>{
-        const maxDim = 1600;
-        let {width, height} = img;
-        if(width > maxDim || height > maxDim){
-          if(width > height){ height = Math.round(height * maxDim/width); width = maxDim; }
-          else { width = Math.round(width * maxDim/height); height = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
-        resolve({name:file.name.replace(/\.[^.]+$/,'')+'.jpg', type:'image/jpeg', dataUrl});
+        try{
+          // Intentamos progresivamente con menor tamaño/calidad hasta quedar liviano
+          const attempts = [
+            {maxDim:1600, q:0.72},
+            {maxDim:1200, q:0.65},
+            {maxDim:1000, q:0.6},
+            {maxDim:800,  q:0.55},
+            {maxDim:600,  q:0.5},
+          ];
+          let result = null;
+          for(const a of attempts){
+            let {width, height} = img;
+            if(width > a.maxDim || height > a.maxDim){
+              if(width > height){ height = Math.round(height * a.maxDim/width); width = a.maxDim; }
+              else { width = Math.round(width * a.maxDim/height); height = a.maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', a.q);
+            // tamaño real aproximado en bytes del base64
+            const approxBytes = dataUrl.length * 0.75;
+            result = {name:file.name.replace(/\.[^.]+$/,'')+'.jpg', type:'image/jpeg', dataUrl, approxBytes};
+            if(approxBytes < 900*1024) break; // menos de ~900KB, suficiente
+          }
+          resolve(result);
+        }catch(err){ reject(err); }
       };
-      img.onerror = reject;
+      img.onerror = ()=>reject(new Error('No se pudo leer la imagen (formato no soportado, probá con JPG o PNG)'));
       img.src = e.target.result;
     };
     reader.onerror = reject;
@@ -863,6 +893,7 @@ document.getElementById('btnSaveVehiculo').onclick = async ()=>{
     anio: document.getElementById('fAnio').value.trim(),
     marca: document.getElementById('fMarca').value.trim(),
     modelo: document.getElementById('fModelo').value.trim(),
+    registro: document.getElementById('fRegistro').value.trim(),
     tipo: tipoSel,
     jurisdicciones: formJuris,
     quienPaga: pagoSel,
@@ -875,9 +906,17 @@ document.getElementById('btnSaveVehiculo').onclick = async ()=>{
   const btn = document.getElementById('btnSaveVehiculo');
   btn.disabled = true; btn.textContent = 'Guardando…';
 
+  const payload = JSON.stringify(rec);
+  const approxKB = Math.round(payload.length / 1024);
+  if(payload.length > 4.3 * 1024 * 1024){
+    showToast('El registro pesa ~' + approxKB + 'KB, es demasiado. Quitá el comprobante o adjuntá uno más liviano.');
+    btn.disabled = false; btn.textContent = 'Guardar vehículo';
+    return;
+  }
+
   const ok = await storageSet('vehiculo:' + dominio, rec);
   if(!ok){
-    showToast('Error al guardar (el archivo puede ser muy pesado)');
+    showToast('Error al guardar (~' + approxKB + 'KB). Probá sin el comprobante adjunto para confirmar si es el archivo.');
     btn.disabled = false; btn.textContent = 'Guardar vehículo';
     return;
   }
