@@ -1,0 +1,47 @@
+{
+  "dominio": "LTY853",
+  "anio": "2012",
+  "marca": "VOLKSWAGEN",
+  "modelo": "VOYAGE 1.6 GP",
+  "registro": "SANTA FE N° 2 (21024)",
+  "tipo": "Consignación",
+  "jurisdicciones": {
+    "sf_ciudad": {
+      "montoPatente": "0",
+      "montoMultasPagina": "0",
+      "montoMultasSuat": "0"
+    },
+    "sf_provincia": {
+      "montoMultasSuat": "0",
+      "montoPatente": "0",
+      "montoMultasPagina": "0"
+    },
+    "caba": {
+      "montoMultasSuat": "0",
+      "montoPatente": "0",
+      "montoMultasPagina": "0"
+    },
+    "ba_provincia": {
+      "montoMultasSuat": "0",
+      "montoPatente": "0",
+      "montoMultasPagina": "0"
+    },
+    "entre_rios": {
+      "montoMultasSuat": "0",
+      "montoPatente": "0",
+      "montoMultasPagina": "0"
+    },
+    "cordoba": {
+      "montoMultasSuat": "0",
+      "montoPatente": "0",
+      "montoMultasPagina": "0"
+    },
+    "misiones": {
+      "montoMultasSuat": "0",
+      "montoMultasPagina": "0",
+      "montoPatente": "0"
+    }
+  },
+  "observaciones": "",
+  "actualizado": "2026-08-20T18:14:19.832Z"
+}
